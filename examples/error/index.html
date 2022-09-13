@@ -1,0 +1,48 @@
+<!--
+ * @Author: Sunny
+ * @Date: 2022-09-11 22:25:35
+ * @LastEditors: Suuny
+ * @LastEditTime: 2022-09-13 11:32:25
+ * @Description: 
+ * @FilePath: /buried-point-sdk/examples/error/index.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="../../dist/index.js"></script>
+</head>
+<body>
+ 
+   
+
+    <script>
+        new tracker({
+            requestUrl: "http://localhost:9000/tracker",    
+            historyTracker: true,
+            domTracker: false,
+            jsError: true
+        })
+        
+    </script>
+
+    <script>
+
+
+        console.error('error test')
+        console.error('error test2')
+        function test() {
+            return Promise.reject(Error('promise'))
+        }
+        test();
+        throw Error('hhh')
+
+        
+    </script>
+
+    
+</body>
+</html>

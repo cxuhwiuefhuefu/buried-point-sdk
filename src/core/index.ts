@@ -2,7 +2,7 @@
  * @Author: Sunny
  * @Date: 2022-08-18 10:48:13
  * @LastEditors: Suuny
- * @LastEditTime: 2022-09-03 22:19:31
+ * @LastEditTime: 2022-09-13 11:33:34
  * @Description:
  * @FilePath: /buried-point-sdk/src/core/index.ts
  */
@@ -19,7 +19,7 @@ export default class Tracker {
 
     public data: Options; // 用户传递的值需要有一个接收
     constructor(options: Options) { // 用户传的自定义选项
-        this.data = Object.assign(this.initDef, options)
+        this.data = Object.assign(this.initDef(), options)
         this.installTracker()
     }
     private initDef(): DefaultOptions { // 初始化 兜底的
@@ -86,7 +86,7 @@ export default class Tracker {
         console.log('this.data', this.data.historyTracker, this.data.hashTracker, this.data.domTracker, this.data.jsError)
         if (this.data.historyTracker) {
             console.log('触发 historyTracker')
-            
+
             this.installhandle()
 
             this.captureEvents(['pushState', 'replaceState', 'popstate'], 'history-pv')
@@ -105,9 +105,9 @@ export default class Tracker {
 
     // 原生不支持监听 history 的 pushState 和 replaceState 事件，手动添加事件监听
     private installhandle() {
-        const bindEventListener =  <T extends keyof History>(type: T) => {
+        const bindEventListener = <T extends keyof History>(type: T) => {
             const historyEvent = history[type];
-            return  () => {
+            return () => {
                 const newEvent = historyEvent.apply(this, arguments);
                 const e: any = new Event(type);
                 e.arguments = arguments;
@@ -125,21 +125,48 @@ export default class Tracker {
         this.promiseReject();
     }
 
-    // 监听JS错误事件
+    // 监听JS错误事件/页面静态资源加载报错
     private errorEvent() {
-        window.addEventListener('error', (event) => {
-            this.reportTracker({
-                event: 'error',
-                targetkeyof: 'message',
-                message: event.message
-            })
-        })
+        window.addEventListener('error', (event: any) => {
+            if (event) {
+                let target = event.target || event.srcElement;
+                let isElementTarget = target instanceof HTMLScriptElement || target instanceof HTMLLinkElement || target instanceof HTMLImageElement;
+                if (!isElementTarget) { // 监听JS错误事件
+                    this.reportTracker({
+                        event: 'error',
+                        targetkeyof: 'message',
+                        message: event.message
+                    })
+                } else { // 页面静态资源加载错误处理
+                    let { target } = event;
+                    let typeName = target.localName;
+                    let sourceUrl = "";
+                    // 我们根据e.target的属性来判断它是link标签，还是script标签。目前只关注只监控了css，js，img文件加载错误的情况。
+                    if (typeName === "link") {
+                        sourceUrl = target.href;
+                    } else if (typeName === "script") {
+                        sourceUrl = target.src;
+                    }else if(typeName === "img") {
+                        sourceUrl = target.src;
+                    } 
+                    this.reportTracker({
+                        event: 'loadSourceError',
+                        targetkeyof: 'message',
+                        src: sourceUrl,
+                        message: event.message
+                    })
+                }
+            }
+        }, true)
     }
+
+
 
     // 监听promise 
     private promiseReject() {
         window.addEventListener('unhandledrejection', (event) => {
             event.promise.catch(error => {
+                console.log("promiseReject", error)
                 this.reportTracker({
                     event: "promise",
                     targetKey: 'message',
@@ -152,14 +179,16 @@ export default class Tracker {
 
     // 上报方法
     private reportTracker<T>(data: T) {
-        const params = Object.assign(this.data, data, { time: new Date().getTime() }) // 加个时间戳
 
+        const params = Object.assign(this.data, data, { time: new Date().getTime() }) // 加个时间戳
         let headers = {
             type: "application/x-www-form-urlencoded"
         }
         let blob = new Blob([JSON.stringify(params)], headers);
-
         navigator.sendBeacon(this.data.requestUrl, blob)
+
+        // navigator.sendBeacon(this.data.requestUrl, JSON.stringify(params))
+
     }
 
 }

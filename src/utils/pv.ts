@@ -2,10 +2,11 @@
  * @Author: Sunny
  * @Date: 2022-08-26 17:33:49
  * @LastEditors: Suuny
- * @LastEditTime: 2022-08-29 14:58:50
+ * @LastEditTime: 2022-09-11 20:26:35
  * @Description: 
  * @FilePath: /buried-point-sdk/src/utils/pv.ts
  */
+
 
 // keyof 泛型约束
 export const createHistoryEvent = <T extends keyof History>(type: T) => {
